@@ -1,0 +1,52 @@
+#Azure Linux konfigurálása (https://www.digitalocean.com/community/tutorials/how-to-secure-apache-with-let-s-encrypt-on-debian-11)
+
+sudo bash
+sudo apt update
+#web server telepítése
+sudo apt install apache2 -y
+#kezdő oldal elkészítése
+sudo rm -f /var/www/html/index.html
+sudo nano /var/www/html/index.html
+sudo apt update
+#ssl megoldása (https)
+sudo apt install snapd
+sudo snap install core
+sudo snap refresh core
+sudo snap install --classic certbot
+sudo ln -s /snap/bin/certbot /usr/bin/certbot
+# linuxwebtola.westeurope.cloudapp.azure.com --> ez a feladat szerint változik
+sudo certbot --apache -d linuxwebtola.westeurope.cloudapp.az
+enter
+yes
+
+#Azure Windows konfigurálása
+
+#szabályok elfogadása
+1
+#kilépés a scponfig 
+15
+#web server telepítése
+Install-WindowsFeature web-server -IncludeManagementTools
+#kezdő oldal készítése
+notepad c:\inetpub\wwwroot\index.html
+
+#ssl
+Import-Module WebAdministration
+Remove-WebBinding -Name "Default Web Site" -Protocol "http" -Port 80 -ErrorAction SilentlyContinue
+# webwintola.italynorth.cloudapp.azure.com --> ez a feladat szerint változik
+New-WebBinding -Name "Default Web Site" -Protocol "http" -Port 80 -Host "webwintola.italynorth.cloudapp.azure.com"
+md c:\Tools
+cd c:\Tools
+Invoke-WebRequest -Uri https://github.com/win-acme/win-acme/releases/download/v2.2.9.1701/win-acme.v2.2.9.1701.x64.pluggable.zip -OutFile wacs.zip
+cd c:\Tools
+Expand-Archive .\wacs.zip -DestinationPath .\
+.\wacs.exe
+#
+N
+1
+A
+y
+y
+y
+üres+enter
+Q
