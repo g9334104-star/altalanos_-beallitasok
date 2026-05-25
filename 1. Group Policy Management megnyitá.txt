@@ -1,0 +1,53 @@
+1. Group Policy Management megnyitása
+
+A szerveren:
+
+Start → keresd: Group Policy Management
+vagy futtatás:
+gpmc.msc
+
+2. GPO létrehozása az OU-ban
+
+Navigálj ide:
+
+Forest → Domains → saját domain → VIZSGAZO_OU
+Jobb klikk a VIZSGAZO_OU-n
+→ Create a GPO in this domain, and Link it here
+Név:
+CALC-DESKTOP-GPO
+
+3. GPO szerkesztése
+Jobb klikk a CALC-DESKTOP-GPO
+→ Edit
+
+4. Parancsikon létrehozása (EZ A LÉNYEG)
+
+Menj ide:
+
+User Configuration
+ → Preferences
+   → Windows Settings
+     → Shortcuts
+Jobb klikk → New → Shortcut
+
+5. Shortcut beállítások
+
+Töltsd ki így:
+
+General fül:
+Action: Create
+Name: Számológép
+Location:
+Desktop
+Target:
+C:\Windows\System32\calc.exe
+
+7. Házirend érvényesítése
+
+A kliens gépen (vagy VM-ben):
+
+gpupdate /force
+
+Majd:
+
+kijelentkezés → visszajelentkezés

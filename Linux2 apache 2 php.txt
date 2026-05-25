@@ -1,0 +1,67 @@
+Linux2 apache 2 php
+
+
+b) sources.list beállítása
+A klónozott tároló már megvan, használjuk az FTP listát:
+bash
+cat ~/Linux-vizsga/"Debian 12 \"bookworm\" complete FTP sources.list" > /etc/apt/sources.list
+apt-get update
+
+c) Programok telepítése
+bash
+apt-get install -y mc apache2 libapache2-mod-php git
+
+d) Felhasználók létrehozása
+
+bash
+useradd -m -s /bin/bash alex
+echo "alex:Pataky" | chpasswd
+
+useradd -m -s /bin/bash bela
+echo "bela:Pataky" | chpasswd
+
+e) Felhasználók hozzáadása a www-data csoporthoz
+bash
+usermod -aG www-data alex
+usermod -aG www-data bela
+
+f) Git klón
+bash
+cd ~
+git clone https://github.com/viraghkrisztian-pataky/Linux-vizsga.git
+
+g) PHP fájlok másolása a webszerverre
+bash
+cp ~/Linux-vizsga/php/* /var/www/html/
+
+h) teszt.php létrehozása
+bash
+cat > /var/www/html/teszt.php 
+<< 'EOF'
+<?php
+echo "<h1>Teszt oldal</h1>";
+echo "<p>PHP verzió: " . phpversion() . "</p>";
+phpinfo();
+?>
+EOF
+
+i) Tulajdonos beállítása rekurzívan
+bash
+chown -R www-data:www-data /var/www/html
+
+j) Jogosultságok beállítása
+bash
+find /var/www/html -type d -exec chmod 775 {} \;
+find /var/www/html -type f -exec chmod 664 {} \;
+
+k) Webszerver elindítása és böngészőben megnyitás
+bash
+systemctl start apache2
+systemctl enable apache2
+
+Majd a gazda gépen (nem a VM-ben) böngészőben nyisd meg:
+http://<VM_IP_CÍME>
+
+A VM IP-címét így tudod lekérdezni a Debian gépen:
+bash
+ip a

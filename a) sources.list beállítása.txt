@@ -1,0 +1,77 @@
+a) sources.list beállítása
+bash
+cat /root/Linux-vizsga/"Debian 12 \"bookworm\" complete FTP sources.list" > /etc/apt/sources.list
+apt-get update
+
+b) Programok telepítése
+bash
+apt-get install -y mc samba samba-common-bin git
+
+c) Felhasználók létrehozása
+bash
+useradd -m -s /bin/bash alma
+echo "alma:Pataky" | chpasswd
+
+useradd -m -s /bin/bash korte
+echo "korte:Pataky" | chpasswd
+
+d) myshare csoport létrehozása, felhasználók hozzáadása
+bash
+groupadd myshare
+usermod -aG myshare alma
+usermod -aG myshare korte
+
+e) /share/kozos mappa létrehozása
+bash
+mkdir -p /share/kozos
+
+f) Git klón + smb.txt másolása
+bash
+cd /root
+git clone https://github.com/viraghkrisztian-pataky/Linux-vizsga.git
+cp /root/Linux-vizsga/smb/smb.txt /share/kozos/
+
+g) Tulajdonos beállítása
+A telepítéskor létrehozott felhasználó nevét helyettesítsd be (pl. user):
+bash
+chown -R user:myshare /share/kozos
+
+h) Jogosultságok beállítása (770)
+bash
+chmod -R 770 /share/kozos
+
+Tulajdonos: rwx – teljes hozzáférés
+Csoport: rwx – teljes hozzáférés
+Egyéb: --- – semmi
+
+
+i) Samba megosztás beállítása
+bash
+nano /etc/samba/smb.conf
+A fájl végére add hozzá:
+
+[Linux]
+   path = /share/kozos
+   browseable = yes
+   guest ok = no
+   valid users = @myshare
+   writable = yes
+Majd a Samba felhasználói jelszavak beállítása:
+bash
+smbpasswd -a alma
+# Jelszó: Pataky
+
+smbpasswd -a korte
+# Jelszó: Pataky
+Samba újraindítása:
+bash
+systemctl restart smbd
+
+j) Gazdagépen a megosztás megnyitása
+A gazdagép fájlkezelőjében (pl. Nautilus, Thunar) nyisd meg:
+smb://<VM_IP_CÍME>/Linux
+\\192.168.1.2\Linux
+Bejelentkezés pl. alma / Pataky adatokkal, majd nyisd meg az smb.txt fájlt és az utolsó sor után írd be a neved.
+A VM IP-címét a Debian gépen kérdezd le:
+bash
+ip a

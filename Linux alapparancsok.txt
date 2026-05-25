@@ -1,0 +1,117 @@
+Linux alapparancsok
+Navigáció és fájlkezelés
+Csoportok megtekintéseCsoportok megtekintése
+cat /etc/group
+Felhasználók megtekintése
+cat /etc/passwd
+Egy adott felhasználó csoportjainak megtekintése
+groups user
+vagy 
+id user
+
+pwd                    # jelenlegi mappa megjelenítése
+ls                     # mappa tartalmának listázása
+ls -la                 # részletes lista rejtett fájlokkal
+cd /mappa              # mappába lépés
+cd ..                  # egy mappával vissza
+cd ~                   # home mappába lépés
+mkdir mappa            # mappa létrehozása
+mkdir -p mappa         # mappa létrehozása és ezon belül egy másiké is
+rmdir mappa            # üres mappa törlése
+rm fájl                # fájl törlése
+rm -r mappa            # mappa törlése tartalommal együtt
+rm -rf mappa           # mappa törlése kényszer (force)
+cp fájl /cél           # fájl másolása
+cp -r mappa /cél       # mappa másolása
+mv fájl /cél           # fájl áthelyezése vagy átnevezése
+touch fájl             # üres fájl létrehozása
+cat fájl               # fájl tartalmának megjelenítése
+nano fájl              # fájl szerkesztése
+less fájl              # fájl olvasása lapozással
+head fájl              # fájl első 10 sora
+tail fájl              # fájl utolsó 10 sora
+
+Felhasználókezelés
+bash
+whoami                 # jelenlegi felhasználó
+id                     # felhasználó ID és csoportok
+useradd -m user        # felhasználó létrehozása home mappával
+userdel -r user        # felhasználó törlése
+passwd user            # jelszó beállítása
+usermod -aG csoport user  # felhasználó hozzáadása csoporthoz
+groups user            # felhasználó csoportjai
+su - user              # váltás másik felhasználóra
+sudo parancs           # parancs futtatása adminként
+
+Rendszer
+bash
+apt update             # csomaglista frissítése
+apt upgrade            # csomagok frissítése
+apt install csomag     # csomag telepítése
+apt remove csomag      # csomag eltávolítása
+systemctl start x      # szolgáltatás indítása
+systemctl stop x       # szolgáltatás leállítása
+systemctl restart x    # szolgáltatás újraindítása
+systemctl status x     # szolgáltatás állapota
+systemctl enable x     # automatikus indítás bekapcsolása
+reboot                 # újraindítás
+shutdown -h now        # leállítás
+df -h                  # lemezhasználat
+free -h                # memóriahasználat
+top                    # futó folyamatok
+ps aux                 # összes folyamat listája
+kill PID               # folyamat leállítása
+
+Hálózat
+bash
+ip a                   # IP címek megjelenítése
+ping 8.8.8.8           # kapcsolat tesztelése
+ssh user@IP            # SSH kapcsolat
+ssh user@IP -p PORT    # SSH kapcsolat más porton
+scp fájl user@IP:/cél  # fájl másolása SSH-n
+wget URL               # fájl letöltése
+curl URL               # URL lekérése
+netstat -tulpn         # nyitott portok listája
+
+Keresés
+bash
+find / -name fájl      # fájl keresése
+grep "szöveg" fájl     # szöveg keresése fájlban
+grep -r "szöveg" /mappa # rekurzív keresés
+which parancs          # parancs helye
+
+CHMOD – Jogosultságok
+Számok jelentése
+SzámJogosultságJelentés
+0---semmi
+1--Xcsak futtatás
+2-W-csak írás
+3-WXírás + futtatás
+4R--csak olvasás
+5R-Xolvasás + futtatás
+6RW-olvasás + írás
+7RWXminden jog
+Struktúra
+chmod XYZ fájl
+      │││
+      ││└── mások (others)
+      │└─── csoport (group)
+      └──── tulajdonos (owner)
+Leggyakoribb chmod parancsok
+bash
+chmod 777 fájl    # mindenki mindent tehet (RWX RWX RWX)
+chmod 755 fájl    # tulajdonos: RWX, csoport: R-X, mások: R-X
+chmod 644 fájl    # tulajdonos: RW-, csoport: R--, mások: R--
+chmod 600 fájl    # tulajdonos: RW-, csoport: ---, mások: ---
+chmod 700 fájl    # tulajdonos: RWX, csoport: ---, mások: ---
+chmod 664 fájl    # tulajdonos: RW-, csoport: RW-, mások: R--
+chmod 444 fájl    # mindenki csak olvashat
+chmod 000 fájl    # senki sem férhet hozzá
+Rekurzív (mappára és tartalmára)
+bas
+hchmod -R 755 /mappa   # minden fájlra és almappára alkalmazza
+Tulajdonos beállítása
+bash
+chown user fájl              # tulajdonos megváltoztatása
+chown user:csoport fájl      # tulajdonos és csoport
+chown -R user:csoport /mappa # rekurzív

@@ -1,0 +1,119 @@
+1.Statikus NAT
+Szituáció: Van egy belső webszerver amit kívülről is el kell érni.
+[Webszerver]                         [Internet]
+192.168.1.10 ── Fa0/0 ── ROUTER ── Fa0/1 ── 203.0.113.1
+ciscointerface Fa0/0
+ ip nat inside
+
+interface Fa0/1
+ ip nat outside
+
+! fix megfeleltetés: belső IP ↔ publikus IP
+ip nat inside source static 192.168.1.10 203.0.113.2
+
+2. Dinamikus NAT
+Szituáció: Van egy publikus IP-készlet, a belső gépek abból kapnak egyet ideiglenesen.
+[PC-k]                               [Internet]
+192.168.1.0/24 ── Fa0/0 ── ROUTER ── Fa0/1 ── 203.0.113.1
+ciscointerface Fa0/0
+ ip nat inside
+
+interface Fa0/1
+ ip nat outside
+
+! publikus IP-készlet definiálása
+ip nat pool KULSO-KESZLET 203.0.113.10 203.0.113.20 netmask 255.255.255.0
+
+! ACL – ki mehet ki
+access-list 1 permit 192.168.1.0 0.0.0.255
+
+! NAT összekapcsolása a készlettel
+ip nat inside source list 1 pool KULSO-KESZLET
+
+3. PAT (NAT Overload)
+Szituáció: Sok belső gép egyetlen publikus IP-ről internetezik.
+[PC-k]                               [Internet]
+192.168.1.0/24 ── Fa0/0 ── ROUTER ── Fa0/1 ── 203.0.113.1
+192.168.2.0/24 ── Fa0/0.2
+ciscointerface Fa0/0
+ ip nat inside
+
+interface Fa0/0.2
+ ip nat inside
+
+interface Fa0/1
+ ip nat outside
+
+! ACL – mindenki mehet
+access-list 1 permit any
+
+! PAT – overload kulcsszó = portszámmal különbözteti meg
+ip nat inside source list 1 interface Fa0/1 overload
+
+
+
+Összehasonlítás
+                   Statikus     Dinamikus        PAT
+Megfeleltetés      Fix 1:1    Ideiglenes 1:1   Sok:1
+Publikus IP kell   1 db         Több db        1 db elég
+Kívülről elérhető   ✅ igen     ❌ nem        ❌ nem
+
+
+HSRP
+
+a switch azaz befele néző interfacere
+
+interface GigabitEthernet0/1
+
+ ! kötelező: virtuális IP megadása
+ standby 1 ip 10.0.1.10
+
+ ! opcionális: prioritás (alapértelmezett 100, magasabb = aktív lesz)
+ standby 1 priority 110
+
+ ! opcionális: visszaveszi az aktív szerepet ha visszajön
+ standby 1 pre-empt
+
+
+OSPF
+
+router ospf 20
+ ! Belső hálózat (10.0.VSZ.0/24)
+ network 10.0.VSZ.0 0.0.0.255 area 20
+ ! Loopback10 (172.16.10.0/24)
+ network 172.16.10.0 0.0.0.255 area 20
+ ! Teremhálózat (192.168.TSZ.0/24) NEM hirdetjük – passive
+ passive-interface GigabitEthernet0/0
+ exit
+
+ASA
+
+ Inside interfész – VLAN1
+interface Vlan1
+ nameif inside
+ security-level 100
+ ip address 10.0.0.VSZ 255.255.255.0
+ no shutdown
+ exit
+
+! A fizikai portot hozzáadjuk VLAN1-hez (pl. Ethernet0/1)
+interface Ethernet0/1
+ switchport access vlan 1
+ no shutdown
+ exit
+
+router felé minden interface trunk legyen
+
+e) Alapértelmezett útvonal
+route outside 0.0.0.0 0.0.0.0 192.168.TSZ.1
+
+g0/0.10 interfacen
+ ip nat inside
+g0/1
+ ip nat outside
+
+
+hozza létre a 0/0 porton a 10-es számú alinterfészt
+    interf g0/0.10
+I. állítsa be a 10-es VLAN-hoz a 802.1q keretezéshez
+   encapsulation dot1Q 10

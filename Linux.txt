@@ -1,0 +1,104 @@
+Linux
+
+a) Statikus IP-cím beállítása
+Szerkeszd a /etc/network/interfaces fájlt:
+bashnano /etc/network/interfaces
+auto ens33
+iface ens33 inet static
+    address 192.168.TSZ.200+GSZ
+    netmask 255.255.255.0
+    gateway 192.168.TSZ.1
+    dns-nameservers 192.168.100.120
+
+aztán->
+systemctl restart networking
+
+b) sources.list beállítása
+
+bash
+nano /etc/apt/sources.list
+
+A GitHub tárolóból másold be a megfelelő tartalmat (FTP vagy HTTPS verzió), pl.:
+
+deb ftp://ftp.hu.debian.org/debian bookworm main contrib non-free non-free-firmware
+deb ftp://ftp.hu.debian.org/debian bookworm-updates main contrib non-free non-free-firmware
+deb ftp://security.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware
+
+bash
+apt update
+
+c)Programok telepítése
+bash
+apt install mc proftpd git -y
+
+A proftpd telepítésekor válaszd a „standalone" módot.
+
+d) Felhasználók létrehozása
+bash
+useradd -m -s /bin/bash anna
+passwd anna        # Pataky
+
+useradd -m -s /bin/bash bea
+passwd bea         # Pataky
+
+e) iroda csoport létrehozása és felhasználók hozzáadása
+bash
+groupadd iroda
+usermod -aG iroda anna
+usermod -aG iroda bea
+
+f) Anonymous FTP letöltés engedélyezése
+Szerkeszd a ProFTPD konfigurációt:
+bash
+nano /etc/proftpd/proftpd.conf
+Add hozzá (vagy vedd ki a kommentet):
+apache<Anonymous ~ftp>
+    User                ftp
+    Group               nogroup
+    UserAlias           anonymous ftp
+    RequireValidShell   off
+    MaxClients          10
+
+    <Limit LOGIN>
+        AllowAll
+    </Limit>
+
+    <Directory *>
+        <Limit READ DIRS>
+            AllowAll
+        </Limit>
+    </Directory>
+</Anonymous>
+bash
+systemctl restart proftpd
+
+g) Git klón készítése
+bash
+git clone https://github.com/viraghkrisztian-pataky/Linux-vizsga.git /opt/linux-vizsga
+
+h) welcome.msg cseréje
+bash
+cp /opt/linux-vizsga/ftp/ftpmsg.txt /srv/ftp/welcome.msg
+
+Az anonymous FTP gyökere általában /srv/ftp/ vagy /var/ftp/.
+
+Ellenőrizd a proftpd.conf-ban a DefaultRoot és DisplayLogin beállítást:
+apacheDisplayLogin    welcome.msg
+
+i) Jogosultságok beállítása a ftpmsg.txt fájlon
+bash
+chown root:iroda /srv/ftp/welcome.msg
+chmod 664 /srv/ftp/welcome.msg
+
+
+j) WinSCP tesztelés (gazda gépen)
+
+Nyisd meg a WinSCP-t
+Protokoll: FTP
+Host: 192.168.TSZ.200+GSZ
+Felhasználónév: anonymous
+Jelszó: (üres vagy bármilyen e-mail cím)
+Kapcsolódj, töltsd le a welcome.msg / ftpmsg.txt fájlt
+Nyisd meg egy szövegszerkesztővel
+
+anonymus login bepipálva nem kell beírni semmit

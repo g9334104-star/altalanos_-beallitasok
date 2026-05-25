@@ -1,0 +1,91 @@
+3. Telepítés utáni beállítások
+a) sources.list beállítása
+Nyisd meg a fájlt szerkesztővel:
+bash
+nano /etc/apt/sources.list
+Töröld a tartalmát, és illeszd be az egyik alábbi verziót:
+FTP változat (Debian 12 bookworm):
+deb ftp://ftp.hu.debian.org/debian bookworm main contrib non-free non-free-firmware
+deb ftp://ftp.hu.debian.org/debian bookworm-updates main contrib non-free non-free-firmware
+deb ftp://security.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware
+HTTPS változat (Debian 12 bookworm):
+deb https://deb.debian.org/debian bookworm main contrib non-free non-free-firmware
+deb https://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware
+deb https://security.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware
+Mentés: Ctrl+O, Enter, Ctrl+X, majd frissítsd a csomaglista:
+bas
+hapt update
+
+b) Programok telepítése
+bash
+apt install -y mc apache2 git
+
+c) Git klón készítése
+bash
+git clone https://github.com/viraghkrisztian-pataky/Linux-vizsga.git
+Ez létrehoz egy Linux-vizsga nevű mappát az aktuális könyvtárban.
+
+d) A html mappa másolása /web alá
+bash
+mkdir -p /web
+cp -r Linux-vizsga/html /web/
+
+e) Tulajdonos és csoport beállítása
+bash
+chown -R www-data:www-data /web/html
+
+f) Jogosultságok beállítása
+bash
+chmod 755 /web/html
+
+Ez pontosan: tulajdonos = RWX (7), csoport = R-X (5), mások = R-X (5)
+
+Ha a mappán belüli fájlokra is kell alkalmazni:
+bash
+chmod -R 755 /web/html
+
+g) Apache konfiguráció módosítása
+Az alapértelmezett virtuális hoszt konfigurációs fájl szerkesztése:
+bash
+nano /etc/apache2/sites-available/000-default.conf
+Keresd meg a DocumentRoot sort, és módosítsd:
+DocumentRoot /web/html
+A teljes <VirtualHost> blokk így néz ki:
+apache<VirtualHost *:80>
+    ServerAdmin webmaster@localhost
+    DocumentRoot /web/html
+
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+Ezután engedélyezd az Apache-nak a /web/html könyvtár elérését. Szerkeszd az Apache fő konfigját:
+bash
+nano /etc/apache2/apache2.conf
+Add hozzá a fájl végéhez:
+apache<Directory /web/html>
+    Options Indexes FollowSymLinks
+    AllowOverride None
+    Require all granted
+</Directory>
+Mentés után indítsd újra az Apache-ot:
+bash
+systemctl restart apache2
+
+h) Weboldal megnyitása a gazdagépen
+A Debian szerver IP-címét kérdezd le:
+bash
+ip a
+Majd a gazdagép böngészőjébe írd be a szerver IP-címét, pl.:
+http://192.168.x.x
+
+Összefoglaló parancssor gyorsan:
+bash
+apt update
+apt install -y mc apache2 git
+git clone https://github.com/viraghkrisztian-pataky/Linux-vizsga.git
+mkdir -p /web
+cp -r Linux-vizsga/html /web/
+chown -R www-data:www-data /web/html
+chmod -R 755 /web/html
+sed -i 's|DocumentRoot /var/www/html|DocumentRoot /web/html|' /etc/apache2/sites-available/000-default.conf
+systemctl restart apache2
