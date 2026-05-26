@@ -1,0 +1,767 @@
+________________________________________
+TARTALOMJEGYZÉK
+1.	Hyper-V / VirtualBox – VM létrehozása
+2.	Debian telepítés és alapbeállítások
+3.	sources.list beállítása
+4.	Programok telepítése
+5.	Apache2 webszerver konfiguráció
+6.	Git clone és fájlmásolás
+7.	Jogosultságok és tulajdonos beállítása
+8.	Felhasználók és csoportok
+9.	Statikus IP beállítása Debianon
+10.	ProFTPD – FTP szerver
+11.	Samba – fájlmegosztás
+12.	RAID 1 kötet – Debianon (mdadm)
+13.	AWS EC2 – Instance létrehozása
+14.	AWS – SSH kapcsolat + rendszer beállítás
+15.	WinSCP – Fájlfeltöltés
+16.	AWS – Webszerver fájlok kezelése
+17.	AWS – WordPress + MySQL + SSL telepítés
+18.	Azure – VM és WebApp létrehozása
+19.	Google Drive feltöltés
+20.	Képernyőmentés elnevezési konvenciók
+________________________________________
+1. VirtualBox – VM létrehozása
+1.1 Hyper-V – Külső hálózati kapcsoló létrehozása
+Hyper-V Manager → Virtual Switch Manager
+→ New → External → Create Virtual Switch
+Név: VEZETEKNEV-KULSO
+Fizikai adapter: (válaszd ki a hálózati kártyát)
+→ OK
+1.2 Hyper-V – VM létrehozása (GUI)
+Hyper-V Manager → New → Virtual Machine
+Név: VEZETEKNEV-GSZ-DEB
+Generation: Generation 2          ← (2. generáció = UEFI)
+RAM: 4096 MB
+  ☐ Dynamic Memory = KI (nem dinamikus!)
+Hálózat: VEZETEKNEV-KULSO
+Lemez: Create new → 20 GB
+ISO: c:\dsds \debian12.iso
+Ezután: VM → Settings
+Beállítás	Hol	Mit
+2 processzormag	Processor	Number of virtual processors: 2
+Secure Boot KI	Security	Enable Secure Boot → ☐ kiveszi a pipát
+Gazda KI → VM KI	Automatic Stop Action	Shut down the guest OS
+Gazda BE → VM semmit	Automatic Start Action	Nothing
+1.3 Hyper-V – Extra lemezek (r1.vhdx, r2.vhdx)
+VM → Settings → SCSI Controller → Hard Drive → Add
+→ New → Dynamic → 1 GB
+Útvonal: C:\ProgramData\Microsoft\Windows\Hyper-V\Virtual Machines\VEZETEKNEV-GSZ-DEB\r1.vhdx
+Ismételd meg r2.vhdx-szel.
+1.4 VirtualBox – VM létrehozása
+New → Név: VEZETEKNEV-GSZ-DEB
+Type: Linux / Debian (64-bit)
+RAM: 4096 MB
+Lemez: VDI, Fixed Size, 20 GB
+Settings után:
+System → Motherboard → ☑ Enable EFI          ← (2. generáció megfelelője)
+System → Processor → 2 mag
+Network → Adapter 1 → Bridged Adapter        ← (Külső hálózat megfelelője)
+Secure Boot (VirtualBox 7.0+):
+System → Motherboard → ☐ Enable Secure Boot (kiveszi a pipát)
+Automatikus le/felkapcsolás VBoxManage-dzsel (cmd adminként):
+VBoxManage modifyvm "VEZETEKNEV-GSZ-DEB" --autostop-type poweroff
+VBoxManage modifyvm "VEZETEKNEV-GSZ-DEB" --autostart-enabled off
+Extra lemezek (VirtualBox):
+Settings → Storage → SATA Controller → + (Add Hard Disk)
+→ Create new → VDI → Dynamically allocated → 1 GB → r1.vdi
+Ismételd meg r2.vdi-vel.
+________________________________________
+2. Debian telepítés és alapbeállítások
+2.1 Telepítő indítása
+Telepítőben válaszd: "Install"   ← NEM "Graphical Install"!
+2.2 Fontos beállítások a telepítés során
+Beállítás	Érték
+Hostname	vezeteknev-TSZGSZ (pl. kovacs-10901)
+Root jelszó	Paky
+Tükörszerver	No (Ne használj tükörszervert!)
+Software selection	Semmi sem kell – vedd ki a pipát mindenről
+2.3 Particionálás – egyszerű módszer
+Guided – use entire disk
+All files in one partition
+→ Finish → Yes (Write changes)
+2.4 Particionálás – kézi (ha kell: UEFI + ROOT + SWAP + HOME)
+Manual partitioning
+A lemezen:
+FREE SPACE → New partition
+
+1. EFI/UEFI partíció:
+   Méret: 1 GB
+   Type: Primary
+   Use as: EFI System Partition
+
+2. ROOT partíció:
+   Méret: 15 GB (vagy feladatban megadott)
+   Type: Primary
+   Use as: ext4
+   Mount point: /
+
+3. SWAP:
+   Méret: 2 GB
+   Use as: swap area
+
+4. HOME (maradék):
+   Méret: maradék
+   Use as: btrfs
+   Mount point: /home
+
+→ Finish partitioning → Yes
+2.5 Kézi particionálás – VAR partícióval (C feladat)
+1. EFI: 1 GB – EFI System Partition
+2. ROOT: 12 GB – ext4 – /
+3. SWAP: 2 GB – swap
+4. VAR: 5 GB – btrfs – /var
+5. HOME: maradék – btrfs – /home
+________________________________________
+3. sources.list beállítása
+3.1 Fájl megnyitása
+nano /etc/apt/sources.list
+3.2 Tartalom – HTTPS verzió (ezt másold be, töröld a régit)
+deb https://deb.debian.org/debian bookworm main non-free-firmware
+deb https://deb.debian.org/debian bookworm-updates main non-free-firmware
+deb https://deb.debian.org/debian-security bookworm-security main non-free-firmware
+3.3 Tartalom – FTP verzió (alternatíva)
+deb ftp://ftp.debian.org/debian bookworm main non-free-firmware
+deb ftp://ftp.debian.org/debian bookworm-updates main non-free-firmware
+deb ftp://security.debian.org/debian-security bookworm-security main non-free-firmware
+3.4 Mentés és frissítés
+# nano-ban mentés: Ctrl+O → Enter → Ctrl+X
+apt update
+________________________________________
+4. Programok telepítése
+# Csomaglista frissítése
+apt update
+
+# A feladat szerint telepítend:
+apt install -y mc                         # kétablakos fájlkezelő (Midnight Commander)
+apt install -y apache2                    # webszerver
+apt install -y git                        # git
+apt install -y proftpd                    # FTP szerver
+apt install -y samba samba-common-bin     # Samba fájlmegosztás
+apt install -y libapache2-mod-php         # PHP támogatás Apache-hoz
+apt install -y php                        # PHP
+apt install -y mdadm                      # RAID kezelő
+
+# Egyszerre (A feladat):
+apt install -y mc apache2 git
+
+# Egyszerre (B feladat):
+apt install -y mc proftpd git
+
+# Egyszerre (C feladat):
+apt install -y mc apache2 libapache2-mod-php git
+
+# Egyszerre (D feladat):
+apt install -y mc samba samba-common-bin git
+________________________________________
+5. Apache2 webszerver konfiguráció
+5.1 Apache státusz ellenőrzése
+systemctl status apache2
+systemctl start apache2
+systemctl enable apache2
+5.2 Alapértelmezett DocumentRoot megváltoztatása /web/html-re (A feladat)
+nano /etc/apache2/sites-available/000-default.conf
+Módosítsd a DocumentRoot sort:
+DocumentRoot /web/html
+Adj hozzá Directory blokkot a fájlba (a <VirtualHost> tagon belülre):
+<Directory /web/html>
+    Options Indexes FollowSymLinks
+    AllowOverride None
+    Require all granted
+</Directory>
+Mentés (Ctrl+O, Enter, Ctrl+X), majd:
+systemctl restart apache2
+5.3 Alapértelmezett DocumentRoot /var/www/html (C feladat – php fájlok)
+nano /etc/apache2/sites-available/000-default.conf
+DocumentRoot /var/www/html
+systemctl restart apache2
+5.4 PHP teszt fájl létrehozása
+nano /var/www/html/teszt.php
+Tartalom:
+<?php
+phpinfo();
+?>
+5.5 Apache alapértelmezett oldal letiltása / saját engedélyezése
+a2dissite 000-default.conf
+a2ensite sajat.conf
+systemctl reload apache2
+________________________________________
+6. Git clone és fájlmásolás
+6.1 Git clone
+cd /root
+git clone https://github.
+6.2 HTML mappa másolása /web-be (A feladat)
+cp -r /root/Linux-dsa/html /web/
+6.3 PHP fájlok másolása /var/www/html-be (C feladat)
+cp -r /root/Linux-das/php/* /var/www/html/
+6.4 SMB fájl másolása /share/kozos-ba (D feladat)
+mkdir -p /share/kozos
+cp /root/Linux-da/smb/smb.txt /share/kozos/
+6.5 FTP welcome fájl cseréje (B feladat)
+cp /root/Linux-asd/ftp/ftpmsg.txt /etc/proftpd/welcome.msg
+________________________________________
+7. Jogosultságok és tulajdonos beállítása
+7.1 Tulajdonos és csoport beállítása
+# /web/html mappa → www-data:www-data (A feladat)
+chown -R www-data:www-data /web/html
+
+# /var/www mappa rekurzívan → www-data:www-data (C feladat)
+chown -R www-data:www-data /var/www/html
+
+# Saját felhasználó + myshare csoport (D feladat)
+chown -R FELHASZNALO:myshare /share/kozos
+7.2 Jogosultság beállítása (chmod)
+# RWX / R-X / R-X = 755
+chmod 755 /web/html
+
+# Rekurzívan (mappák és fájlok)
+chmod -R 755 /web/html
+
+# Tulajdonos+Csoport=RWX, Mások=semmi → 770
+chmod -R 770 /share/kozos
+
+# 745 = tulajdonos: RWX, csoport: R--, mások: r-x
+chmod -R 745 /var/www/html
+
+# 754 = tulajdonos: RWX, csoport: R-X, mások: R--
+chmod -R 754 /var/www/html
+7.3 Gyors chmod táblázat
+Szám	Jogok	Mit jelent
+7	rwx	olvas + ír + futtat
+6	rw-	olvas + ír
+5	r-x	olvas + futtat
+4	r--	csak olvas
+0	---	semmi
+Formátum: chmod XYZ ahol X=tulajdonos, Y=csoport, Z=mások
+7.4 Ftpmsg.txt jogosultság (B feladat)
+# iroda csoport: rw-, mások: r-- → 640
+chmod 640 /etc/proftpd/welcome.msg
+chown root:iroda /etc/proftpd/welcome.msg
+________________________________________
+8. Felhasználók és csoportok
+8.1 Felhasználók létrehozása
+adduser anna          # interaktív (bekéri a jelszót is)
+adduser bea
+
+# Vagy jelszóval együtt (nem interaktív):
+useradd -m anna
+echo "anna:www-data " | chpasswd
+
+useradd -m bea
+echo "bea:www-data" | chpasswd
+8.2 Csoport létrehozása
+groupadd iroda        # B feladat
+groupadd myshare      # D feladat
+8.3 Felhasználók hozzáadása csoporthoz
+usermod -aG iroda anna
+usermod -aG iroda bea
+
+usermod -aG myshare alma
+usermod -aG myshare korte
+
+# www-data csoporthoz adás (C feladat)
+usermod -aG www-data alex
+usermod -aG www-data bela
+8.4 Csoport tagság ellenőrzése
+groups anna
+cat /etc/group | grep iroda
+________________________________________
+9. Statikus IP beállítása Debianon
+9.1 Hálózati interfész neve lekérdezése
+ip a
+# vagy
+ip link show
+9.2 /etc/network/interfaces szerkesztése
+nano /etc/network/interfaces
+Tartalom (cseréld ki az eth0-t a saját interfész nevére, pl. ens3, enp0s3):
+auto eth0
+iface eth0 inet static
+    address 192.168.TSZ.200+GSZ
+    netmask 255.255.255.0
+    gateway 192.168.TSZ.1
+    dns-nameservers 192.168.100.120
+Példa (TSZ=109, GSZ=1):
+auto ens3
+iface ens3 inet static
+    address 192.168.109.201
+    netmask 255.255.255.0
+    gateway 192.168.109.1
+    dns-nameservers 192.168.100.120
+9.3 Hálózat újraindítása
+systemctl restart networking
+# vagy
+ifdown ens3 && ifup ens3
+9.4 IP ellenőrzése
+ip a
+ping 192.168.109.1
+________________________________________
+10. ProFTPD – FTP szerver
+10.1 Telepítés
+apt install -y proftpd
+Telepítés közben: standalone módot válaszd.
+10.2 Anonymous FTP engedélyezése
+nano /etc/proftpd/proftpd.conf
+Keresd meg az <Anonymous ~ftp> blokkot, és töröld a kommentjeleket (#), vagy add hozzá:
+<Anonymous ~ftp>
+  User ftp
+  Group nogroup
+  UserAlias anonymous ftp
+  RequireValidShell off
+  <Limit LOGIN>
+    AllowAll
+  </Limit>
+  <Directory *>
+    <Limit READ DIRS>
+      AllowAll
+    </Limit>
+  </Directory>
+  WelcomeMsg /etc/proftpd/welcome.msg
+</Anonymous>
+10.3 ProFTPD újraindítása
+systemctl restart proftpd
+systemctl status proftpd
+10.4 Welcome fájl csere
+cp /root/Linux-asd/ftp/ftpmsg.txt /etc/proftpd/welcome.msg
+________________________________________
+11. Samba – fájlmegosztás
+11.1 Telepítés
+apt install -y samba samba-common-bin
+11.2 Megosztott mappa létrehozása
+mkdir -p /share/kozos
+11.3 Samba konfiguráció
+nano /etc/samba/smb.conf
+A fájl végére add hozzá:
+[Linux]
+   comment = Kozos mappa
+   path = /share/kozos
+   valid users = @myshare
+   guest ok = no
+   browseable = yes
+   read only = no
+   create mask = 0770
+   directory mask = 0770
+11.4 Samba felhasználó jelszó beállítása
+smbpasswd -a alma
+smbpasswd -a korte
+11.5 Samba újraindítása
+systemctl restart smbd
+systemctl status smbd
+11.6 Samba tesztelése gazdagépen (Windows Fájlkezelőből)
+Fájlkezelő → Cím sorba: \\IP-CIM\Linux
+Felhasználó: alma
+Jelszó: sds
+________________________________________
+12. RAID 1 kötet – Debianon (mdadm)
+Ez a Debian telepítő kézi particionálásán belül végezhető el, VAGY telepítés után mdadm-mel.
+12.1 RAID 1 létrehozása mdadm-mel (telepítés UTÁN)
+apt install -y mdadm
+
+# Ellenőrizd a lemez neveket:
+lsblk
+# Általában: /dev/sdb és /dev/sdc (az extra 1 GB-os lemezek)
+
+# RAID1 létrehozása:
+mdadm --create /dev/md0 --level=1 --raid-devices=2 /dev/sdb /dev/sdc
+12.2 Fájlrendszer létrehozása és csatolás
+# btrfs fájlrendszer
+mkfs.btrfs /dev/md0
+
+# Csatolási pont létrehozása
+mkdir -p /web          # A feladatnál
+# vagy
+mkdir -p /share        # D feladatnál
+
+# Csatolás
+mount /dev/md0 /web
+12.3 Automatikus csatolás beállítása (/etc/fstab)
+# UUID lekérdezése
+blkid /dev/md0
+
+nano /etc/fstab
+Add hozzá a végére:
+/dev/md0    /web    btrfs    defaults    0    0
+12.4 mdadm konfig mentése
+mdadm --detail --scan >> /etc/mdadm/mdadm.conf
+update-initramfs -u
+________________________________________
+13. AWS EC2 – Instance létrehozása
+13.1 Belépés
+https://awsacademy.instructure.com
+→ SZAKMAI das kurzus → Modules → Sandbox → Start Lab
+→ Zöld jelző → AWS gombra kattint
+13.2 EC2 Instance létrehozása (GUI)
+EC2 → Instances → Launch instances
+
+Név: hokamoka  (vagy amit a feladat kér)
+AMI: Debian 12  (keress rá: Debian 12, Free tier eligible, 64-bit x86)
+Instance type: t2.micro  (vagy t1.micro – ha van ilyen)
+Key pair: → Create new key pair
+  Név: sd-key
+  Type: RSA
+  Format: .pem (OpenSSH/WinSCP esetén)
+  → LETÖLTÉS (fontos!)
+
+Network settings:
+  → Edit
+  Security group: Create new
+    Bejövő szabályok:
+    - SSH   Port 22   Source: Anywhere (0.0.0.0/0)
+    - HTTP  Port 80   Source: Anywhere (0.0.0.0/0)
+
+Storage: 8 GB (alapból)
+
+→ Launch instance
+13.3 Publikus IP lekérdezése
+EC2 → Instances → (kattints az instancedre)
+Public IPv4 address: pl. 54.123.45.67
+13.4 Security Group – HTTP port megnyitása (ha elfelejtetted)
+EC2 → Security Groups → (saját SG)
+→ Inbound rules → Edit inbound rules
+→ Add rule: Type: HTTP, Source: Anywhere
+→ Save rules
+________________________________________
+14. AWS – SSH kapcsolat + rendszer beállítás
+14.1 SSH kapcsolat Windows CMD-ből (kulccsal)
+ssh -i C:\Users\FELHASZNALO\Downloads\asdds-key.pem admin@54.123.45.67
+Ha jogosultság hiba: a .pem fájlra jobb klikk → Tulajdonságok → Biztonság → Csak a te felhasználód legyen jogosult
+14.2 SSH kapcsolat PowerShellből
+ssh -i "C:\Users\FELHASZNALO\Downloads\sfd-key.pem" admin@54.123.45.67
+14.3 Rendszer frissítése
+sudo apt update && sudo apt upgrade -y
+14.4 Apache2 + PHP telepítése
+sudo apt install -y apache2 php libapache2-mod-php
+sudo systemctl start apache2
+sudo systemctl enable apache2
+sudo systemctl status apache2
+14.5 Apache tesztelése
+Böngészőben: http://54.123.45.67
+→ "Apache2 Debian Default Page" oldalt kell látni
+________________________________________
+15. WinSCP – Fájlfeltöltés
+15.1 WinSCP letöltése (ha nincs)
+https://winscp.net/eng/download.php
+→ Download WinSCP Portable executables (nem kell admin!)
+→ Kicsomagol, elindít
+15.2 Kapcsolódás WinSCP-vel
+File protocol: SFTP
+Host name: 54.123.45.67  (az instance publikus IP-je)
+Port: 22
+User name: admin
+Password: (üres)
+→ Advanced → SSH → Authentication → Private key file:
+   → Tallóz → dfs-key.pem kiválasztása
+   → WinSCP automatikusan .ppk-ra konvertálja → Yes
+→ Login
+15.3 Fájl feltöltése
+Bal panel: helyi gép (keresd meg a web.tgz vagy web.zip fájlt)
+Jobb panel: /home/admin/  (az instance home könyvtára)
+→ Fájlt húzd át, vagy F5 = Copy
+________________________________________
+16. AWS – Webszerver fájlok kezelése
+16.1 Fájl áthelyezése documentroot-ba
+# Általában /var/www/html a documentroot
+sudo mv /home/admin/web.tgz /var/www/html/
+# vagy
+sudo cp /home/admin/web.tgz /var/www/html/
+16.2 Kicsomagolás
+cd /var/www/html
+
+# .tgz / .tar.gz fájl esetén:
+sudo tar -xzf web.tgz
+
+# .zip fájl esetén:
+sudo apt install -y unzip
+sudo unzip web.zip
+16.3 Tömörített fájl törlése
+sudo rm /var/www/html/web.tgz
+# vagy
+sudo rm /var/www/html/web.zip
+16.4 Tulajdonos és jogosultság beállítása
+# Tulajdonos: admin, Csoport: www-data
+sudo chown -R admin:www-data /var/www/html/
+
+# Jogok: 754 (feladatban lehet más szám!)
+sudo chmod -R 754 /var/www/html/
+
+# 745 esetén:
+sudo chmod -R 745 /var/www/html/
+16.5 Szimbolikus link létrehozása
+# index.php → main.php (vagy amit a feladat kér)
+sudo ln -s /var/www/html/main.php /var/www/html/index.php
+
+# Ellenőrzés:
+ls -la /var/www/html/index.php
+16.6 index.html törlése
+sudo rm /var/www/html/index.html
+16.7 Weboldal megnyitása böngészőben
+http://54.123.45.67
+→ A saját weboldalt kell látni
+________________________________________
+17. AWS – WordPress + MySQL + SSL telepítés
+Ez a részletesebb AWS feladathoz kell (VPC + EC2 + RDS + WordPress)
+17.1 VPC létrehozása
+VPC → Your VPCs → Create VPC
+  VPC only
+  Név: vpc-web-server
+  IPv4 CIDR: 10.10.0.0/16
+→ Create VPC
+17.2 Subnet létrehozása
+VPC → Subnets → Create subnet
+  VPC: vpc-web-server
+  Subnet name: subnet-web-server
+  Availability Zone: (az1 végű zóna)
+  IPv4 CIDR block: 10.10.1.0/24
+→ Create subnet
+17.3 Internet Gateway
+VPC → Internet gateways → Create
+  Név: igw-web-server
+→ Create → Actions → Attach to VPC → vpc-web-server
+17.4 Route table beállítása
+VPC → Route tables → (a vpc-web-serverhez tartozó RT)
+→ Routes → Edit routes → Add route
+  Destination: 0.0.0.0/0
+  Target: igw-web-server
+→ Save
+17.5 Security Group
+EC2 → Security Groups → Create security group
+  Név: security-group-web-server
+  Description: SSH, HTTP, HTTPS
+  VPC: vpc-web-server
+  Inbound rules:
+    SSH    Port 22   Source: Anywhere
+    HTTP   Port 80   Source: Anywhere
+    HTTPS  Port 443  Source: Anywhere
+→ Create
+17.6 Elastic IP (statikus publikus IP)
+EC2 → Elastic IPs → Allocate Elastic IP address → Allocate
+→ Actions → Associate Elastic IP address
+→ Instance: linux_web_server
+→ Associate
+17.7 DDNS regisztráció (dynu.com)
+1. https://www.dynu.com → regisztráció / bejelentkezés
+2. DDNS Services → Add
+3. Option 2: Use your own domain
+   Vagy: ddnsfree.com-nál: fddf2025KI.ddnsfree.com
+4. IPv4 Address: (AWS Elastic IP)
+5. Mentés
+17.8 WordPress telepítés szerveren
+# Rendszer frissítése
+sudo apt update && sudo apt upgrade -y
+
+# Apache + PHP + MySQL kliens
+sudo apt install -y apache2 php libapache2-mod-php php-mysql php-curl php-gd php-mbstring php-xml php-xmlrpc unzip
+
+# Weboldal mappa
+sudo mkdir -p /var/www/html/wordpress
+sudo chown -R www-data:www-data /var/www/html/
+
+# WordPress letöltése
+cd /tmp
+wget https://wordpress.org/latest.zip
+sudo unzip latest.zip -d /var/www/html/
+sudo chown -R www-data:www-data /var/www/html/wordpress/
+17.9 MySQL adatbázis létrehozása (RDS-en)
+-- Miután csatlakoztál a szerveren:
+mysql -h RDS-ENDPOINT -u admin -p
+
+CREATE DATABASE wordpress;
+EXIT;
+17.10 SSL tanúsítvány (Let's Encrypt)
+sudo apt install -y certbot python3-certbot-apache
+sudo certbot --apache -d fff2025ki.ddnsfree.com
+# Email: add meg
+# Agree: A
+# Share: N
+
+# Ellenőrzés:
+sudo systemctl status certbot.timer
+________________________________________
+18. Azure – VM és WebApp létrehozása
+18.1 Belépés
+https://portal.azure.com
+→ Iskolai email / dk.as.hu email
+18.2 Virtuális hálózat (VNet) létrehozása
+Keresőbe: Virtual networks → Create
+Basics:
+  Név: {VSZ}-vnet
+  Region: North Europe (vagy West Europe – feladat szerint)
+IP addresses:
+  Address space: 192.168.17.0/24
+  Subnet: default → 192.168.17.0/28
+→ Review + Create → Create
+18.3 Virtuális gép létrehozása (Debian)
+Keresőbe: Virtual machines → Create → Azure virtual machine
+Basics:
+  Név: debian12va{VSZ}
+  Region: North Europe
+  Security type: Standard
+  Image: Debian 12 "Bookworm"
+  Size: Standard_B1s (1 vcpu, 1 GiB)
+  Authentication: Password
+  Username: viadolg{VSZ}
+  Password: Vsga123456789@
+
+Disks:
+  OS disk type: Standard SSD
+  Delete with VM: NO (NE törlődjön!)
+
+Networking:
+  VNet: {VSZ}-vnet
+  Public IP: Create new
+  Delete with VM: YES (törlődjön!)
+  Inbound ports: HTTP (80), SSH (22)
+
+Management:
+  Auto-shutdown: Enable
+  Shutdown time: 21:00 (Budapest = UTC+2, tehát 19:00 UTC)
+  Notification: No
+  
+Monitoring:
+  Boot diagnostics: Disable
+  
+→ Review + Create → Create
+18.4 Weblap létrehozása Azure Debianon (SSH után)
+sudo apt update
+sudo apt install -y apache2
+sudo nano /var/www/html/index.html
+Tartalom:
+<html>
+<body>
+<h1>Hello World Készítette: Kovács István 2025.05.28. délelőtt</h1>
+</body>
+</html>
+sudo systemctl restart apache2
+18.5 WebApp (PaaS) létrehozása
+Keresőbe: App Services → Create → Web App
+Basics:
+  Név: linuxwebapp{VSZ}
+  Publish: Container
+  Operating System: Linux
+  Region: North Europe
+  Plan: Basic B1
+
+Container:
+  Image source: Docker Hub
+  Image: httpd:2.4   (vagy nginx:bookworm – feladat szerint)
+  
+→ Review + Create → Create
+18.6 Erőforrások törlése
+Resource groups → (a te RG-d) → Delete resource group
+→ Gépeld be a nevet → Delete
+18.7 OneDrive – Mappa megosztása (SaaS feladat)
+1. https://www.office.com → Bejelentkezés
+2. OneDrive → New → Folder → ViaAcsop{VEZETEKNEV}
+3. Mappa → Share → Settings (fogaskerék):
+   - Anyone with the link: csak olvasás (Read)
+   - Expiration: 2025.07.30.
+   - Password: Szakvizs123456!
+   - Allow download: No (NE)
+   → Apply → Copy link
+4. Mail → New message
+   To: tthl@.hu; @d.ezi.hu
+   Subject: BFelho_PyA
+   Body: Tisztelt Kolléga, megosztottam ezt a mappát veled az eléréséhez szüksége jelszó: Szazs123456!
+   → A linket is illeszd be → Send
+________________________________________
+19. Google Drive feltöltés
+19.1 Screenshots mappa létrehozása asztalon
+Asztalon jobb klikk → New Folder → screenshots
+(vagy a feladat szerint: Z:\képernyőmentések vagy Z:\screenshots)
+19.2 Google Drive-ra feltöltés
+1. Nyisd meg az upload.txt tartalmát (ez egy Drive megosztás link)
+2. Böngészőben nyisd meg a linket
+3. Drag & drop a screenshots mappa tartalmát a Drive-ba
+   vagy: New → File upload → jelöld ki az összes képet
+________________________________________
+20. Képernyőmentés elnevezési konvenciók
+20.1 Elnevezési szabály
+SzerverFeladatszámAlfeladatbetűjel.kiterjesztés
+
+Példák:
+  Szerver1a.png
+  Szerver2c.png
+  Szerver4b.jpg
+  Szerver1d_1.png   (ha több kép kell ugyanahhoz)
+  Szerver1d_2.png
+20.2 Felhő feladatoknál
+FelhőFeladatszámAlfeladatbetűjel.kiterjesztés
+
+Példák:
+  Felhő1.png
+  Felhő2.png
+  Felhő4b_1.jpg
+  Felhő4b_2.jpg
+20.3 Képernyőmentés Windowson
+Teljes képernyő: Win + Shift + S → Full screen
+         vagy: PrtScr → Paint → Beillesztés → Mentés
+         vagy: Snipping Tool → Full screen snip
+20.4 Ajánlott képernyőmentési sorrend (A feladat)
+Fájlnév	Tartalom
+Szerver1a.png	VM beállítások – Generation 2 / EFI
+Szerver1b.png	RAM/CPU/lemez/hálózat beállítások
+Szerver1c_1.png	Auto Stop Action = Shut down
+Szerver1c_2.png	Auto Start Action = Nothing
+Szerver1c_3.png	Secure Boot kikapcsolva
+Szerver1d_1.png	r1 lemez hozzáadva
+Szerver1d_2.png	r2 lemez hozzáadva
+Szerver2a.png	Debian telepítő "Install" képernyő
+Szerver2b.png	Hostname beállítás
+Szerver2c.png	Root jelszó beállítás
+Szerver2e.png	Particionálás kész állapot
+Szerver2f.png	Tükörszerver: No
+Szerver3a.png	sources.list tartalma
+Szerver3b.png	mc/apache2/git telepítve (apt install kész)
+Szerver3c.png	git clone kész
+Szerver3d.png	html mappa átmásolva
+Szerver3e.png	chown www-data:www-data /web/html
+Szerver3f.png	chmod 755 /web/html
+Szerver3g.png	Apache konfig módosítva
+Szerver3h.png	Böngészőben a weboldal megnyílik
+________________________________________
+⚡ GYORS PARANCS ÖSSZEFOGLALÓ
+# Rendszer frissítés
+apt update && apt upgrade -y
+
+# Programok telepítése
+apt install -y mc apache2 git proftpd samba samba-common-bin php libapache2-mod-php
+
+# Git clone
+git clone https…
+
+# Apache újraindítás
+systemctl restart apache2
+
+# Tulajdonos beállítás
+chown -R www-data:www-data /web/html
+chown -R FELHASZNALO:CSOPORT /share/kozos
+
+# Jogosultság
+chmod -R 755 /web/html
+chmod -R 770 /share/kozos
+chmod -R 640 /fajl
+
+# Felhasználó létrehozása
+useradd -m FELHASZNALO
+echo "FELHASZNALO:Pay" | chpasswd
+
+# Csoport létrehozása + tag hozzáadása
+groupadd CSOPORT
+usermod -aG CSOPORT FELHASZNALO
+
+# IP konfig
+nano /etc/network/interfaces
+systemctl restart networking
+
+# SSH kapcsolat
+ssh -i kulcs.pem admin@IP
+
+# Fájl kicsomagolás
+tar -xzf fajl.tgz
+unzip fajl.zip
+
+# Szimbolikus link
+ln -s /var/www/html/main.php /var/www/html/index.php
+
+# Fájl törlés
+rm /var/www/html/index.html
+rm /var/www/html/web.tgz
