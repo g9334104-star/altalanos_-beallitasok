@@ -1,0 +1,29 @@
+# c) Telepítés
+sudo apt update
+sudo apt install mc proftpd git -y
+
+# d) Felhasználók létrehozása (jelszó: Pataky)
+sudo adduser anna
+sudo adduser bea
+
+# e) Csoport + tagok
+sudo groupadd iroda
+sudo usermod -aG iroda anna
+sudo usermod -aG iroda bea
+
+# f) proftpd.conf szerkesztése
+sudo nano /etc/proftpd/proftpd.conf
+# → Anonymous blokk hozzáadása a fájl végére
+
+# g) Git klón
+git clone https://github.com/viraghkrisztian-pataky/Linux-vizsga.git
+
+# h) welcome.msg csere
+sudo cp ~/Linux-vizsga/ftp/ftpmsg.txt /srv/ftp/welcome.msg
+
+# i) Jogosultságok
+sudo chown ftp:iroda /srv/ftp/welcome.msg
+sudo chmod 664 /srv/ftp/welcome.msg
+
+# Újraindítás
+sudo systemctl restart proftpd

@@ -1,0 +1,32 @@
+# Frissítés + telepítés
+sudo apt update
+sudo apt install mc apache2 proftpd git -y
+
+# Git klón
+git clone https://github.com/viraghkrisztian-pataky/Linux-vizsga.git
+
+# HTML másolás
+sudo cp -r ~/Linux-vizsga/html/* /var/www/html/
+
+# Jogosultságok
+sudo chown -R www-data:www-data /var/www/html/
+sudo chmod -R 755 /var/www/html/
+
+# Apache újraindítás
+sudo systemctl restart apache2
+
+# FTP konfig szerkesztése
+sudo nano /etc/proftpd/proftpd.conf
+# → DefaultRoot ~ sor hozzáadása/uncommentelése
+# → Anonymous blokk hozzáadása a fájl végére
+
+# ftpmsg másolás az anonymous alapmappájába
+sudo cp ~/Linux-vizsga/ftp/ftpmsg.txt /srv/ftp/welcome.msg
+
+# pataky csoport beállítása a fájl szerkesztéséhez
+# (pataky az alapfelhasználó, már létezik)
+sudo chown ftp:pataky /srv/ftp/welcome.msg
+sudo chmod 664 /srv/ftp/welcome.msg
+
+# ProFTPD újraindítás
+sudo systemctl restart proftpd

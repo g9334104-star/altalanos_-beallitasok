@@ -1,0 +1,44 @@
+# b) Telepítés
+sudo apt update
+sudo apt install mc samba samba-common-bin git -y
+
+# c) Felhasználók (jelszó: Pataky)
+sudo adduser alma
+sudo adduser korte
+
+# d) Csoport + tagok
+sudo groupadd myshare
+sudo usermod -aG myshare alma
+sudo usermod -aG myshare korte
+
+# e) Mappa létrehozása
+sudo mkdir -p /share/kozos
+
+# f) Git klón + másolás
+cd /root
+sudo git clone https://github.com/viraghkrisztian-pataky/Linux-vizsga.git
+sudo cp /root/Linux-vizsga/smb/smb.txt /share/kozos/
+
+# g) Tulajdonos beállítása
+sudo chown -R admin:myshare /share/kozos/
+
+# h) Jogosultságok (770)
+sudo chmod -R 770 /share/kozos/
+
+# i) Samba konfig szerkesztése
+sudo nano /etc/samba/smb.conf
+# [Linux]
+   path = /share/kozos
+   valid users = @myshare
+   guest ok = no
+   browseable = yes
+   writable = yes
+
+# Samba felhasználók regisztrálása
+sudo smbpasswd -a alma
+sudo smbpasswd -a korte
+
+# Konfig ellenőrzés + újraindítás
+sudo testparm
+sudo systemctl restart smbd
+sudo systemctl restart nmbd
