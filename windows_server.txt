@@ -1,0 +1,274 @@
+AJANLOTT SORREND: VM letrehozas → AD → DHCP → NAT → IIS/DNS → GIT → FTP → GPO-k
+
+
+----------------------------------------------------------------
+1. ACTIVE DIRECTORY – TARTOMANY, OU, FELHASZNALOK
+----------------------------------------------------------------
+
+# Telepites (Server Manager)
+Add Roles → Active Directory Domain Services → Add Features → Install
+→ Promote this server to a domain controller
+→ Add new forest → Root domain: KOZEPFOLDE
+→ DSRM jelszo megadasa → Install
+
+# OU-k letrehozasa (dsa.msc)
+jobb klikk domain → New → Organizational Unit
+→ MEGYE_OU
+→ Gondor_OU
+→ Mordor_OU
+
+# Csoportok letrehozasa
+jobb klikk az OU-n → New → Group
+→ MEGYE_OU-ban: megye_GRP  (tagjai: gondor_GRP + mordor_GRP)
+→ Gondor_OU-ban: gondor_GRP
+→ Mordor_OU-ban: mordor_GRP
+
+# Felhasznalok
+Felhasznalonev | Megjelenitendo nev  | Jelszo       | Csoport
+---------------------------------------------------------------
+Legolas        | Orlando Bloom       | legoPAS2022  | megye_GRP
+Gandalf        | Ian McKellen        | gandPAS2022  | gondor_GRP
+Aragon         | Viggo Mortense      | aragPass2022 | mordor_GRP
+
+- Jelszo soha ne jarjon le: Account ful → Password never expires bepipalni
+- Aragon bejelentkezesi ido: jobb klikk → Properties → Account → Logon Hours
+  → csak hetkoznap 08:00–17:00 engedelyezni
+
+
+----------------------------------------------------------------
+2. HOME MAPPAK + VASUDVARD MEGOSZTÁS
+----------------------------------------------------------------
+
+# Taverna (HOME mappak)
+H:\ → Uj mappa: Taverna
+Megosztás: jobb klikk → Properties → Sharing → Advanced Sharing
+  → Share this folder → Permissions → Everyone: Full Control → OK
+
+dsa.msc → mind 3 felhasznalot kijolol → Properties → Profile ful
+  → Connect H: To: \\vizsga.local\Taverna\%username% → Apply
+(Az AD automatikusan letrehozza a mappakat)
+
+NTFS jogok: minden felhasznalo csak a sajat mappajat latja/irja
+  Security ful → mindenkinél csak a sajat felhasznaloneve legyen Full Control-lal
+
+# Vasudvard (V: meghajto, csak olvashato)
+H:\ → Uj mappa: Vasudvard
+Megosztás: Everyone Full Control
+NTFS Security: megye_GRP → Read only (Write/Modify NE legyen bepipálva)
+
+GPO → User Config → Preferences → Windows Settings → Drive Maps
+  → New Mapped Drive
+  → Action: Create
+  → Location: \\vizsga.local\Vasudvard
+  → Drive Letter: V
+
+
+----------------------------------------------------------------
+3. DHCP KISZOLGALO  (/26 = 192.168.50.0 – .63)
+----------------------------------------------------------------
+
+# Belso interfesz fix IP beallitasa
+Halozat → NIC2 → IPv4:
+  IP:    192.168.50.1
+  Maszk: 255.255.255.192
+  GW:    (uresen hagyni)
+  DNS:   192.168.50.1
+
+# DHCP telepites
+Server Manager → Add Roles → DHCP Server → Install
+Tools → DHCP → IPv4 → New Scope
+
+  Nev: Belo
+  Start IP: 192.168.50.1
+  End IP:   192.168.50.62
+  Hossz:    26  (maszk automatikusan: 255.255.255.192)
+
+  Kizarasok (Exclusions):
+    Elso 5:  192.168.50.1  – 192.168.50.5  → Add
+    Utolso 5: 192.168.50.58 – 192.168.50.62 → Add
+
+  Router (GW): 192.168.50.1 → Add
+  DNS Forwarding: 192.168.100.120
+
+  → Yes, I want to activate this scope → Finish
+
+# Foglalas (Reservation) a kliens gepnek
+Scope → Reservations → New Reservation
+  IP:  192.168.50.50
+  MAC: kliens MAC cime (ha nincs kliens: 001122334455 kamu)
+
+
+----------------------------------------------------------------
+4. NAT – HALOZATI CIMFORDITAS
+----------------------------------------------------------------
+
+Tools → Routing and Remote Access
+  → jobb klikk szerver neve → Configure and Enable Routing and Remote Access
+  → Network Address Translation (NAT)
+  → Valaszd ki a KULSO halozati kartya (NEM a 192.168.50.1-es)
+  → Finish
+
+
+----------------------------------------------------------------
+5. WEB SZERVER (IIS) + DNS + GIT
+----------------------------------------------------------------
+
+# IIS telepites
+Server Manager → Add Roles → Web Server (IIS) → Install
+
+# WEB mappa + kezdomappa beallitas
+H:\ → Uj mappa: WEB → ide csomagold ki a web.zip tartalmat
+
+IIS Manager → Default Web Site → Advanced Settings
+  → Physical Path: H:\WEB
+
+# Binding (csak belso halozatrol erheto el + nev)
+IIS Manager → Default Web Site → Edit Bindings → http → Edit
+  → IP address: 192.168.50.1
+  → Host name:  vizsgazo.hu
+  → OK → Close
+
+# DNS bejegyzes
+Tools → DNS → Forward Lookup Zones → jobb klikk → New Zone
+  → Next → Next → Zone name: vizsgazo.hu → Next → Finish
+
+vizsgazo.hu zonan belul → jobb klikk ures reszen → New Host (A or AAAA)
+  → Name: (uresen hagyni)
+  → IP address: 192.168.50.1
+  → Add Host → OK → Done
+
+# GIT (3 commit)
+H:\WEB mappaban → jobb klikk → Git Bash Here
+
+git init
+git add .
+git commit -m "Projekthez adas"
+
+# --- modositsd az index.html-t (pl. irj bele egy szokoz), mentsd ---
+git add .
+git commit -m "Modositas"
+
+# --- modositsd megegyszer az index.html-t, mentsd ---
+git add .
+git commit -m "Veglegesites"
+
+
+----------------------------------------------------------------
+6. EDGE KEZDOLAP – GPO
+----------------------------------------------------------------
+
+Group Policy Management → jobb klikk domain (vizsga.local)
+  → Create a GPO in this domain → Nev: Edge_GPO → OK
+
+jobb klikk Edge_GPO → Edit
+  → User Configuration → Preferences → Control Panel Settings
+  → Internet Settings → jobb klikk → New → Internet Explorer 10
+
+  Home page: http://vizsgazo.hu
+  → nyomj F5-ot (zold alahuzes = aktivalva)
+  → OK
+
+
+----------------------------------------------------------------
+7. FTP SZERVER (Anonymous, csak olvasas)
+----------------------------------------------------------------
+
+# FTP telepites
+Add Roles → Web Server (IIS) kibontasa
+  → FTP Server + FTP Service bepipalni → Install
+
+# FTP mappa
+H:\ → Uj mappa: FTP
+
+# FTP site letrehozasa
+IIS Manager → Sites → jobb klikk → Add FTP Site
+  FTP site name: VIZSGAFTP
+  Physical path: H:\FTP
+  → Next
+  IP Address: All Unassigned
+  SSL: No SSL
+  → Next
+  Authentication: Anonymous bepipalni
+  Authorization (Allow access to): Anonymous users
+  Permissions: Read (csak Olvasas) bepipalni
+  → Finish
+
+# Cisco PacketTracer letoltese
+Bongeszoben: ccna.pataky.hu → PacketTracer telepito letoltese
+→ Masolj at a H:\FTP mappaba
+
+
+----------------------------------------------------------------
+8. CHROME + FIREFOX GPO-VAL (automatikus telepites)
+----------------------------------------------------------------
+
+# MSI fajlok elokeszitese
+Chrome MSI + Firefox MSI letoltese
+→ Atmasolni: \\vizsga.local\Vasudvard\ (vagy kulon megosztott mappaba)
+
+# Szoftvertelepites GPO (Computer Configuration)
+Group Policy Management → Uj GPO: Szoftverek → Edit
+  → Computer Configuration → Policies → Software Settings
+  → Software installation → jobb klikk → New → Package
+
+  Elérési ut (KOTELEZO halozati ut!):
+    \\vizsga.local\Vasudvard\chrome.msi → Open → Assigned → OK
+  (Ismeteld Firefox MSI-vel is)
+
+# Chrome automatikus inditas belepeskor
+  User Configuration → Policies → Administrative Templates
+  → System → Logon
+  → "Run these programs at user logon" → Enabled
+  → Show → Erteknek: chrome.exe → OK
+
+# Chrome kezdolap (Registry GPO)
+  User Configuration → Preferences → Windows Settings → Registry
+  → New Registry Item (3 darab kell!)
+
+  1. bejegyzes:
+     Hive:       HKEY_CURRENT_USER
+     Key Path:   Software\Policies\Google\Chrome
+     Value name: HomepageLocation
+     Value type: REG_SZ
+     Value data: http://vizsgazo.hu
+
+  2. bejegyzes:
+     Hive:       HKEY_CURRENT_USER
+     Key Path:   Software\Policies\Google\Chrome
+     Value name: RestoreOnStartup
+     Value type: REG_DWORD
+     Value data: 4
+
+  3. bejegyzes:
+     Hive:       HKEY_CURRENT_USER
+     Key Path:   Software\Policies\Google\Chrome\RestoreOnStartupURLs
+     Value name: 1
+     Value type: REG_SZ
+     Value data: http://vizsgazo.hu
+
+
+----------------------------------------------------------------
+9. KLIENS CSATLAKOZTATASA TARTOMANYHOZ
+----------------------------------------------------------------
+
+Kliens gepen:
+  Beallitasok → Rendszer → Nevaltoztatas/tartomany
+  → Domain: KOZEPFOLDE → admin hitelesito megadasa → Ujrainditas
+
+Szerveren (dsa.msc):
+  Computers mappa → CNT-MONOGRAM → jobb klikk → Move
+  → MEGYE_OU → OK
+
+
+================================================================
+LEGGYAKORIBB HIBAK
+================================================================
+
+- web.zip tartalmat KOZVETLENUL H:\WEB-be csomagold ki (ne legyen alkonyvtar)
+- DHCP /26-os halozatban a kiosztható tartomany .1 – .62 (NEM .254!)
+- Chrome Registry GPO-hoz mindharom bejegyzes kell
+- Halozati meghajto eleresi utja: \\vizsga.local\... (nem H:\...)
+- IIS Binding-nel az IP 192.168.50.1 legyen (kulonben kintrol is erheto)
+- GPO-knal gpupdate /force paranccsal lehet azonnal frissiteni
+
+================================================================
