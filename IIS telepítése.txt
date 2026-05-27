@@ -1,0 +1,19 @@
+IIS telepítése
+Tools-ban meglehet nyitni
+c: inetpub wwwroot módosítható a kezdőoldal
+
+
+DHCP 
+DHCP manager
+scope létrehozás 
+
+DNS
+reverse lookup zone
+arpa megadás
+pl:192.168.10.0/24 -> arpa:10.168.192
+172.16.0.0/16    16.172
+
+
+DNS 
+forwarder DNS szerverre rányomsz és utána megnyitod a forwarders fájlt
+
