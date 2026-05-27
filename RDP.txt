@@ -1,0 +1,27 @@
+VWWARE:
+RemoteDesktop:
+Server Manager-> Local Server-> Remote Desktop-Enabled
+
+Gazdagépen Távoli asztal kapcsolat, windows szerver IP-je, Administrator, jelszó
+
+
+VirtualBox:
+Linux
+ NAT adapter
+ putty portforward vagy cask simán 22 port
+ user@localhost
+
+Windows
+ BRIDGED
+ Gép ip-je
+ Administrator
+ Jelszó
+
+Linux új hostname
+hostnamectl set-hostname újnév
+
+felhasználóváltás
+ su felhasználó
+
+root jelszó csere
+ passwd root

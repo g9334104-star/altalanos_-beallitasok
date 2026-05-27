@@ -1,0 +1,47 @@
+sudo apt update
+sudo apt install mc apache2 libapache2-mod-php php git -y
+
+Felhasználók létrehozása
+
+sudo adduser alex
+sudo adduser bela
+
+
+www-data csoporthoz adás
+
+sudo usermod -aG www-data alex
+sudo usermod -aG www-data bela
+
+Git klón
+
+git clone https://github.com/viraghkrisztian-pataky/Linux-vizsga.git
+
+
+PHP fájlok másolása a webszerver alapértelmezett helyére
+
+sudo cp -r ~/Linux-vizsga/php/* /var/www/html/
+
+
+
+teszt.php létrehozása
+
+sudo nano /var/www/html/teszt.php
+
+<?php
+    phpinfo();
+?>
+
+
+Tulajdonos beállítása rekurzívan
+
+sudo chown -R www-data:www-data /var/www/html/
+
+Jogosultságok (tulajdonos+csoport: RWX, mások: R = 774)
+sudo chmod -R 774 /var/www/html/
+
+# DirectoryIndex beállítása – web.php legyen a főoldal
+sudo nano /etc/apache2/mods-enabled/dir.conf
+# → DirectoryIndex web.php index.php index.html
+
+# Apache újraindítás
+sudo systemctl restart apache2
