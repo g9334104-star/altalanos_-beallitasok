@@ -1,32 +1,46 @@
-# Frissítés + telepítés
+# b) Telepítés
 sudo apt update
-sudo apt install mc apache2 proftpd git -y
+sudo apt install mc apache2 git -y
 
-# Git klón
+# c) Git klón
 git clone https://github.com/viraghkrisztian-pataky/Linux-vizsga.git
 
-# HTML másolás
-sudo cp -r ~/Linux-vizsga/html/* /var/www/html/
+# d) html mappa átmásolása /web mappába
+sudo mkdir -p /web
+sudo cp -r ~/Linux-vizsga/html /web/
 
-# Jogosultságok
-sudo chown -R www-data:www-data /var/www/html/
-sudo chmod -R 755 /var/www/html/
+# e) Tulajdonos és csoport beállítása
+sudo chown -R www-data:www-data /web/html/
+
+# f) Jogosultságok (RWX / R-X / R-X = 755)
+sudo chmod -R 755 /web/html/
+
+# g/1) DocumentRoot átállítása
+sudo nano /etc/apache2/sites-available/000-default.conf
+# → DocumentRoot /web/html
+
+# g/2) Directory blokk hozzáadása ugyanabba a fájlba
+# <Directory /web/html>
+#     Options Indexes FollowSymLinks
+#     AllowOverride None
+#     Require all granted
+# </Directory>
+
+# g/3) apache2.conf – /web mappa engedélyezése
+sudo nano /etc/apache2/apache2.conf
+# → <Directory /web/> blokkot add hozzá:
+# <Directory /web/>
+#     Options Indexes FollowSymLinks
+#     AllowOverride None
+#     Require all granted
+# </Directory>
+
+# g/4) DirectoryIndex – web.html legyen a főoldal
+sudo nano /etc/apache2/mods-enabled/dir.conf
+# → DirectoryIndex web.html index.html index.php
+
+# g/5) /web mappa elérhetősége
+sudo chmod 755 /web
 
 # Apache újraindítás
 sudo systemctl restart apache2
-
-# FTP konfig szerkesztése
-sudo nano /etc/proftpd/proftpd.conf
-# → DefaultRoot ~ sor hozzáadása/uncommentelése
-# → Anonymous blokk hozzáadása a fájl végére
-
-# ftpmsg másolás az anonymous alapmappájába
-sudo cp ~/Linux-vizsga/ftp/ftpmsg.txt /srv/ftp/welcome.msg
-
-# pataky csoport beállítása a fájl szerkesztéséhez
-# (pataky az alapfelhasználó, már létezik)
-sudo chown ftp:pataky /srv/ftp/welcome.msg
-sudo chmod 664 /srv/ftp/welcome.msg
-
-# ProFTPD újraindítás
-sudo systemctl restart proftpd
