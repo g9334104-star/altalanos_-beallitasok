@@ -61,3 +61,42 @@ no access-list 100
 ! ACL leválasztása interfészről
 interface FastEthernet0/0
  no ip access-group 100 in
+
+PORTSEC
+
+enable
+configure terminal
+
+interface FastEthernet0/1
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security violation shutdown
+ switchport port-security mac-address sticky
+exit
+
+write memory
+⎘ Másolás
+⚖️ Violation módok összehasonlítása
+Mód	Mi történik jogsértéskor?	Port állapot	Log / SNMP
+shutdown	Port azonnal err-disabled lesz	❌ Letiltva	✅ Igen
+restrict	Jogsértő csomagok eldobva, port marad	✅ Aktív	✅ Igen
+protect	Jogsértő csomagok csendben eldobva	✅ Aktív	❌ Nem
+🔄 Err-disabled port visszaállítása
+shutdown után
+! Ha a port err-disabled állapotba kerül, így állítsd vissza:
+interface FastEthernet0/1
+ shutdown
+ no shutdown
+exit
+⎘ Másolás
+🔍 Ellenőrzés
+show parancsok
+! Port security állapot egy porton
+show port-security interface FastEthernet0/1
+
+! Összes port security összefoglaló
+show port-security
+
+! Tárolt (sticky) MAC címek
+show port-security address
