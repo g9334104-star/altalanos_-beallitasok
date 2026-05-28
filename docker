@@ -1,0 +1,37 @@
+version: "3.8"
+
+services:
+
+  mysqluser_server:
+    image: mysql:latest
+    container_name: mysqluser_server
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: Bb123456@
+    ports:
+      - "33061:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - db_usernet1
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: mysqluser_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysqluser_server
+      PMA_PORT: 3306
+    ports:
+      - "8082:80"
+    depends_on:
+      - mysqluser_server
+    networks:
+      - db_usernet1
+
+volumes:
+  mysql_data:
+
+networks:
+  db_usernet1:
+    driver: bridge
