@@ -1,0 +1,63 @@
+📋 Standard ACL (csak forrás IP alapján)
+1–99 / 1300–1999
+! Engedélyezés – egy host
+access-list 10 permit host 10.0.0.30
+
+! Engedélyezés – egész hálózat (wildcard mask!)
+access-list 10 permit 10.0.0.0 0.0.0.255
+
+! Tiltás – egy host
+access-list 10 deny host 192.168.1.50
+
+! Tiltás – egész hálózat
+access-list 10 deny 192.168.1.0 0.0.0.255
+
+! Mindenki más engedélyezése (implicit deny nélkül)
+access-list 10 permit any
+⎘ Másolás
+📋 Extended ACL (forrás + cél + protokoll + port)
+100–199 / 2000–2699
+! Szintaxis:
+! access-list SZÁM permit|deny PROTOKOLL FORRÁS CÉL [port]
+
+! Engedélyezés – HTTP (80) egy hostról bármerre
+access-list 100 permit tcp host 10.0.0.10 any eq 80
+
+! Engedélyezés – HTTPS (443)
+access-list 100 permit tcp 10.0.0.0 0.0.0.255 any eq 443
+
+! Engedélyezés – ping (ICMP)
+access-list 100 permit icmp any any
+
+! Tiltás – Telnet (23) egy hálózatból
+access-list 100 deny tcp 192.168.1.0 0.0.0.255 any eq 23
+
+! Tiltás – DNS (UDP 53)
+access-list 100 deny udp any any eq 53
+
+! Mindenki más engedélyezése
+access-list 100 permit ip any any
+⎘ Másolás
+🔗 ACL alkalmazása interfészre
+kötelező lépés!
+! Az ACL csak akkor hat, ha interfészre van kötve!
+
+interface FastEthernet0/0
+ ! Bejövő forgalomra (az interfészre érkező csomagok)
+ ip access-group 100 in
+
+ ! Kimenő forgalomra (az interfészről kimenő csomagok)
+ ip access-group 100 out
+exit
+⎘ Másolás
+🔍 Ellenőrzés és törlés
+! Meglévő ACL-ek listázása
+show access-lists
+show ip access-lists
+
+! Egy konkrét ACL törlése
+no access-list 100
+
+! ACL leválasztása interfészről
+interface FastEthernet0/0
+ no ip access-group 100 in
